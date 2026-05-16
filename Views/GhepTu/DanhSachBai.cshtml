@@ -1,0 +1,44 @@
+﻿@model List<HocTiengTrung.Models.BaiHoc>
+
+<div class="container mt-5">
+
+    <h1 class="mb-4 d-flex justify-content-center align-items-center">
+        Danh Sách Bài Học
+    </h1>
+
+    @foreach (var item in Model)
+    {
+        <a asp-controller="GhepTu"
+           asp-action="LamBai"
+           asp-route-id="@item.Id"
+           class="btn-baihoc">
+
+            @item.TenBaiHoc
+
+        </a>
+    }
+
+</div>
+
+<style>
+
+    .btn-baihoc {
+        display: flex;
+        align-content: space-between; 
+        padding: 12px 25px;
+        margin: 15px;
+        background: black;
+        color: white;
+        text-decoration: none;
+        border-radius: 10px;
+        transition: 0.3s;
+        font-weight: bold;
+    }
+
+        .btn-baihoc:hover {
+            background: limegreen;
+            color: white;
+            transform: scale(1.05);
+        }
+
+</style>

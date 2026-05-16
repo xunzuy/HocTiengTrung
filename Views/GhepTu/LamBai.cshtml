@@ -1,0 +1,485 @@
+﻿@model List<HocTiengTrung.Models.CauHoiGhepTu>
+
+@{
+    var dapAn = ViewBag.DapAn as List<string>;
+}
+
+<div class="container mt-5">
+
+    <!-- ================================= -->
+    <!-- PHẦN ĐIỂM + THÔNG BÁO -->
+    <!-- ================================= -->
+
+    <div class="text-center mb-5">
+
+        <!-- BAN ĐẦU ẨN -->
+        <div id="ketQua"
+             style="display:none;">
+
+            <!-- Điểm -->
+            <h1>
+                Điểm:
+                <span id="diem">0</span>
+            </h1>
+
+            <!-- Chữ động -->
+            <h1 id="thongBao"
+                class="thong-bao">
+            </h1>
+
+        </div>
+
+        <!-- NÚT CHẤM ĐIỂM -->
+        <button id="btnChamDiem"
+                class="btn btn-success btn-lg">
+
+            Chấm Điểm
+
+        </button>
+
+    </div>
+
+    <div class="row">
+
+        <!-- ================================= -->
+        <!-- CỘT BÊN TRÁI -->
+        <!-- ================================= -->
+
+        <div class="col-md-6">
+
+            <!-- Thêm id để JS render random vào đây -->
+            <div id="cot-trai">
+            </div>
+
+        </div>
+
+        <!-- ================================= -->
+        <!-- CỘT BÊN PHẢI -->
+        <!-- ================================= -->
+
+        <div class="col-md-6">
+
+            <div class="card p-3 shadow bg-white text-dark">
+
+                <h3>Đáp Án</h3>
+
+                <!-- Thêm id để JS render random vào đây -->
+                <div class="d-flex flex-wrap"
+                     id="khung-dap-an">
+                </div>
+
+                <!-- ================================= -->
+                <!-- NÚT LÀM LẠI + QUAY VỀ -->
+                <!-- Thêm mới -->
+                <!-- ================================= -->
+
+                <div class="d-flex gap-2 mt-3">
+
+                    <!-- Làm lại: reset + random lại -->
+                    <button id="btnLamLai"
+                            class="btn flex-fill">
+                        Làm Lại
+                    </button>
+
+                    <!-- Quay về trang danh sách -->
+                    <a href="/BaiHoc"
+                       class="btn flex-fill">
+                        Quay Về
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+
+    /* ================================= */
+    /* Ô THẢ */
+    /* ================================= */
+
+    .o-tha {
+        min-height: 60px;
+        border: 2px dashed gray;
+        border-radius: 10px;
+        padding: 10px;
+        background: white;
+        color: black;
+        font-weight: bold;
+    }
+
+    /* ================================= */
+    /* ĐÁP ÁN KÉO (cột bên phải) */
+    /* ================================= */
+
+    .o-keo {
+        cursor: grab;
+        background: black;
+        color: white;
+        padding: 12px 25px;
+        border-radius: 10px;
+        font-weight: bold;
+        transition: 0.3s;
+        user-select: none;
+        margin: 5px;
+    }
+
+        .o-keo:hover {
+            background: limegreen;
+            transform: scale(1.05);
+        }
+
+    /* ================================= */
+    /* TỪ ĐÃ THẢ VÀO Ô BÊN TRÁI */
+    /* ================================= */
+
+    .o-keo-da-tha {
+        padding: 8px 18px;
+        border-radius: 10px;
+        font-weight: bold;
+        display: inline-block;
+        color: black;
+    }
+
+    /* ================================= */
+    /* CHỮ THÔNG BÁO ĐỘNG */
+    /* ================================= */
+
+    .thong-bao {
+        margin-top: 20px;
+        margin-bottom: 25px;
+        font-size: 45px;
+        font-weight: bold;
+        text-align: center;
+    }
+
+</style>
+
+<script>
+
+    // =================================
+    // DỮ LIỆU GỐC TỪ RAZOR
+    // Lưu lại để dùng khi làm lại
+    // =================================
+
+    // Danh sách câu hỏi: [{cotBenTrai, cotBenPhai}]
+    const danhSachCauHoi = @Html.Raw(
+        Newtonsoft.Json.JsonConvert.SerializeObject(
+            Model.Select(x => new {
+                cotBenTrai = x.CotBenTrai,
+                cotBenPhai = x.CotBenPhai
+            })
+        )
+    );
+
+    // Danh sách đáp án (mỗi item có thể có / nếu nhiều đáp án)
+    const danhSachDapAn = @Html.Raw(
+        Newtonsoft.Json.JsonConvert.SerializeObject(dapAn)
+    );
+
+    // =================================
+    // BIẾN TOÀN CỤC
+    // =================================
+
+    let phanTuDangKeo = null;
+    let diem = 0;
+
+    // =================================
+    // HÀM RANDOM THỨ TỰ MẢNG (Fisher-Yates)
+    // =================================
+
+    function tronMang(mang) {
+
+        // Sao chép mảng gốc để không làm thay đổi dữ liệu gốc
+        let ketQua = [...mang];
+
+        for (let i = ketQua.length - 1; i > 0; i--) {
+
+            // Chọn vị trí ngẫu nhiên từ 0 đến i
+            let j = Math.floor(Math.random() * (i + 1));
+
+            // Hoán đổi
+            [ketQua[i], ketQua[j]] = [ketQua[j], ketQua[i]];
+
+        }
+
+        return ketQua;
+
+    }
+
+    // =================================
+    // HÀM RENDER CỘT TRÁI
+    // Tạo các card câu hỏi theo thứ tự random
+    // =================================
+
+    function renderCotTrai(danhSachRandom) {
+
+        let cotTrai = document.getElementById('cot-trai');
+
+        // Xóa nội dung cũ
+        cotTrai.innerHTML = '';
+
+        danhSachRandom.forEach(function (item) {
+
+            // Tạo card
+            let card = document.createElement('div');
+            card.classList.add(
+                'card', 'p-3', 'shadow', 'mb-3', 'bg-white', 'text-dark'
+            );
+
+            // Tiêu đề từ vựng
+            let tieuDe = document.createElement('h4');
+            tieuDe.innerHTML = item.cotBenTrai;
+
+            // Ô thả - dùng flex-wrap để chứa nhiều từ
+            let oTha = document.createElement('div');
+            oTha.classList.add(
+                'o-tha', 'd-flex', 'flex-wrap', 'gap-2', 'mt-3'
+            );
+            oTha.dataset.dapan = item.cotBenPhai;
+
+            // Gắn sự kiện thả cho ô mới
+            ganSuKienTha(oTha);
+
+            card.appendChild(tieuDe);
+            card.appendChild(oTha);
+            cotTrai.appendChild(card);
+
+        });
+
+    }
+
+    // =================================
+    // HÀM RENDER CỘT PHẢI
+    // Tạo các từ đáp án theo thứ tự random
+    // =================================
+
+    function renderCotPhai(danhSachDapAnRandom) {
+
+        let khungDapAn = document.getElementById('khung-dap-an');
+
+        // Xóa nội dung cũ
+        khungDapAn.innerHTML = '';
+
+        danhSachDapAnRandom.forEach(function (item) {
+
+            // Tách nếu có nhiều đáp án cách nhau bởi /
+            item.split('/').forEach(function (tu) {
+
+                let oKeo = document.createElement('div');
+                oKeo.classList.add('o-keo');
+                oKeo.setAttribute('draggable', 'true');
+                oKeo.innerHTML = tu.trim();
+
+                // Gắn sự kiện kéo
+                ganSuKienKeo(oKeo);
+
+                khungDapAn.appendChild(oKeo);
+
+            });
+
+        });
+
+    }
+
+    // =================================
+    // HÀM GẮN SỰ KIỆN KÉO
+    // Tách ra thành hàm riêng để tái sử dụng
+    // khi render lại sau khi làm lại
+    // =================================
+
+    function ganSuKienKeo(oKeo) {
+
+        oKeo.addEventListener(
+            'dragstart',
+            function () {
+                phanTuDangKeo = this;
+            });
+
+    }
+
+    // =================================
+    // HÀM GẮN SỰ KIỆN THẢ
+    // Tách ra thành hàm riêng để tái sử dụng
+    // khi render lại sau khi làm lại
+    // =================================
+
+    function ganSuKienTha(oTha) {
+
+        // Cho phép thả
+        oTha.addEventListener(
+            'dragover',
+            function (e) {
+                e.preventDefault();
+            });
+
+        // Khi thả
+        oTha.addEventListener(
+            'drop',
+            function () {
+
+                let tuDang =
+                    phanTuDangKeo.innerHTML.trim();
+
+                // Kiểm tra từ đã có trong ô chưa
+                let daTonTai = Array.from(
+                    this.querySelectorAll('.o-keo-da-tha')
+                ).some(el => el.innerHTML.trim() === tuDang);
+
+                if (daTonTai) return;
+
+                // Lấy danh sách đáp án đúng
+                let cacDapAn =
+                    this.dataset.dapan
+                    .split('/')
+                    .map(x => x.trim());
+
+                // Tạo thẻ con để hiển thị từ được thả
+                let tagMoi =
+                    document.createElement('div');
+
+                tagMoi.classList.add('o-keo-da-tha');
+                tagMoi.innerHTML = tuDang;
+
+                // Kiểm tra đúng / sai
+                if (cacDapAn.includes(tuDang)) {
+
+                    // Đúng: màu xanh
+                    tagMoi.style.backgroundColor =
+                        'lightgreen';
+
+                    // Ẩn đáp án đã dùng bên phải
+                    phanTuDangKeo.style.display =
+                        'none';
+
+                    // Tăng điểm 1 lần mỗi ô
+                    if (this.dataset.daDung !== 'true') {
+                        diem++;
+                        this.dataset.daDung = 'true';
+                    }
+
+                } else {
+
+                    // Sai: màu hồng
+                    tagMoi.style.backgroundColor =
+                        'pink';
+
+                }
+
+                this.appendChild(tagMoi);
+
+            });
+
+    }
+
+    // =================================
+    // HÀM KHỞI TẠO / LÀM LẠI
+    // Random cả 2 cột rồi render lại
+    // =================================
+
+    function khoiTao() {
+
+        // Reset điểm
+        diem = 0;
+
+        // Ẩn kết quả cũ
+        document.getElementById('ketQua')
+            .style.display = 'none';
+
+        // Random thứ tự cột trái
+        let cotTraiRandom = tronMang(danhSachCauHoi);
+
+        // Random thứ tự cột phải
+        let cotPhaiRandom = tronMang(danhSachDapAn);
+
+        // Render lại cả 2 cột
+        renderCotTrai(cotTraiRandom);
+        renderCotPhai(cotPhaiRandom);
+
+    }
+
+    // =================================
+    // AUTO SCROLL KHI KÉO
+    // =================================
+
+    document.addEventListener(
+        'dragover',
+        function (e) {
+
+            const vungCuon = 120;
+
+            if (e.clientY < vungCuon) {
+                window.scrollBy(0, -80);
+            }
+
+            if (e.clientY > window.innerHeight - vungCuon) {
+                window.scrollBy(0, 80);
+            }
+
+        });
+
+    // =================================
+    // NÚT CHẤM ĐIỂM
+    // =================================
+
+    document.getElementById('btnChamDiem')
+    .addEventListener(
+        'click',
+        function () {
+
+            document.getElementById('ketQua')
+                .style.display = 'block';
+
+            document.getElementById('diem')
+                .innerHTML = diem;
+
+            let thongBao =
+                document.getElementById('thongBao');
+
+            if (diem <= 4) {
+                thongBao.innerHTML =
+                    'Dở ẹc 😭 học bài lại đi';
+                thongBao.style.color = 'red';
+            }
+            else if (diem <= 8) {
+                thongBao.innerHTML =
+                    'Cao đó 😎 nhưng vẫn chưa được';
+                thongBao.style.color = 'orange';
+            }
+            else if (diem < 9) {
+                thongBao.innerHTML =
+                    'Ráng một xíu nữa 🔥';
+                thongBao.style.color = 'lime';
+            }
+            else {
+                thongBao.innerHTML =
+                    'Giỏi lắm cục dàng 😍';
+                thongBao.style.color = 'cyan';
+            }
+
+        });
+
+    // =================================
+    // NÚT LÀM LẠI
+    // Reset + random lại cả 2 cột
+    // =================================
+
+    document.getElementById('btnLamLai')
+    .addEventListener(
+        'click',
+        function () {
+            khoiTao();
+        });
+
+    // =================================
+    // CHẠY LẦN ĐẦU KHI VÀO TRANG
+    // =================================
+
+    khoiTao();
+
+</script>
