@@ -5,7 +5,7 @@
 namespace HocTiengTrung.Migrations
 {
     /// <inheritdoc />
-    public partial class KhoiTao : Migration
+    public partial class InitSQLite : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -14,9 +14,9 @@ namespace HocTiengTrung.Migrations
                 name: "BaiHocs",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    TenBaiHoc = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TenBaiHoc = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -27,11 +27,11 @@ namespace HocTiengTrung.Migrations
                 name: "CauHoiGhepTus",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    CotBenTrai = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CotBenPhai = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    BaiHocId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    CotBenTrai = table.Column<string>(type: "TEXT", nullable: true),
+                    CotBenPhai = table.Column<string>(type: "TEXT", nullable: true),
+                    BaiHocId = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
