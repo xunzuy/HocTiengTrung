@@ -15,12 +15,12 @@ namespace HocTiengTrung
             // MVC
             builder.Services.AddControllersWithViews();
 
-            // SQL Server
+            // SQLite
             builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(
-                    builder.Configuration
-                    .GetConnectionString("KetNoiMacDinh")
-                ));
+            options.UseSqlite(
+                builder.Configuration
+                .GetConnectionString("KetNoiMacDinh")
+            ));
 
             var app = builder.Build();
 
